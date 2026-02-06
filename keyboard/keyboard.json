@@ -1,0 +1,33 @@
+{
+    "keyboard_name": "Kensington PS/2 to USB",
+    "manufacturer": "xero",
+    "maintainer": "xero",
+    "bootloader": "caterina",
+    "processor": "atmega32u4",
+    "url": "",
+    "usb": {
+        "vid": "0xFEED",
+        "pid": "0x4B45",
+        "device_version": "1.0.0"
+    },
+    "matrix_pins": {
+        "direct": [[null]]
+    },
+    "layouts": {
+        "LAYOUT": {
+            "layout": [
+                {"matrix": [0, 0], "x": 0, "y": 0}
+            ]
+        }
+    },
+    "features": {
+        "mousekey": true,
+        "extrakey": true,
+        "ps2_mouse": true
+    },
+    "ps2": {
+        "driver": "interrupt",
+        "clock_pin": "E6",
+        "data_pin": "B5"
+    }
+}
