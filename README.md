@@ -42,11 +42,12 @@ power.
 |-----------------|-------------|--------------|
 | Bottom-left     | Bit 0       | Button 1 (left)   |
 | Bottom-right    | Bit 1       | Button 2 (right)  |
-| Top-left        | Bit 2       | Button 3 (middle) |
-| Top-right       | Bit 3       | Button 4          |
+| Top-left        | Bit 2       | Button 4          |
+| Top-right       | Bit 3       | Button 3 (middle) |
 
-Hold top-left (middle click) and move the ball to scroll. Quick tap sends
-a middle click.
+Top-left and top-right are swapped via `PS2_MOUSE_THINKING_BTN_SWAP` so that
+top-right is middle click / scroll. Hold top-right and move the ball to scroll.
+Quick tap sends a middle click.
 
 ## Building
 
@@ -60,7 +61,14 @@ ThinkingMouse support. The included patch adds:
 - `PS2_MOUSE_SKIP_RESET` -- skip the PS/2 reset command on init
 - `PS2_MOUSE_THINKING` -- ThinkingMouse protocol handling (sync check,
   X MSB reconstruction, overflow bit reinterpretation)
+- `PS2_MOUSE_THINKING_BTN_SWAP` -- swap two button bits for physical remapping
 - `PS2_MOUSE_BTN_MASK` made overridable via `#ifndef`
+- `PS2_MOUSE_BTN_DEBOUNCE` -- release debouncing for micro-switch chatter
+- Sync recovery flush -- when a desync is detected (byte 0 missing bit 7),
+  the driver now flushes remaining bytes from the broken packet instead of
+  discarding one byte at a time. Without this, a parity error dropping byte 0
+  lets byte 2 (Y movement data with bit 7 set for negative values) pass the
+  sync check as a fake byte 0, producing a phantom button release mid-drag.
 
 ```sh
 cd /path/to/qmk_firmware

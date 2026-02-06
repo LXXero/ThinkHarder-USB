@@ -1,5 +1,5 @@
 diff --git a/drivers/ps2/ps2_mouse.c b/drivers/ps2/ps2_mouse.c
-index a51b86598e..64910ec77a 100644
+index a51b86598e..39a4f02294 100644
 --- a/drivers/ps2/ps2_mouse.c
 +++ b/drivers/ps2/ps2_mouse.c
 @@ -44,10 +44,17 @@ void ps2_mouse_init(void) {
@@ -20,19 +20,31 @@ index a51b86598e..64910ec77a 100644
  
  #ifdef PS2_MOUSE_USE_REMOTE_MODE
      ps2_mouse_set_remote_mode();
-@@ -94,6 +101,11 @@ void ps2_mouse_task(void) {
+@@ -94,6 +101,23 @@ void ps2_mouse_task(void) {
  #else
      if (pbuf_has_data()) {
          mouse_report.buttons = ps2_host_recv_response();
 +#ifdef PS2_MOUSE_THINKING
 +        /* ThinkingMouse sync: bit 7 of byte 0 is always 1.
-+         * If not set, we're mid-packet -- discard byte and resync. */
-+        if (!(mouse_report.buttons & 0x80)) return;
++         * If not set, we're mid-packet -- flush remaining bytes from the
++         * broken packet so the next read starts on a real byte 0.
++         * Without this, a dropped byte 0 lets byte 2 (Y data with bit 7
++         * set for negative movement) pass as a fake byte 0 with garbage
++         * in the button bits. */
++        if (!(mouse_report.buttons & 0x80)) {
++            while (pbuf_has_data()) {
++                uint8_t b = ps2_host_recv();
++                if (b & 0x80) break;  /* found next real byte 0, but we
++                                       * can't unread it -- just let the
++                                       * next call pick up a fresh packet */
++            }
++            return;
++        }
 +#endif
          mouse_report.x       = ps2_host_recv_response();
          mouse_report.y       = ps2_host_recv_response();
  #    ifdef PS2_MOUSE_ENABLE_SCROLLING
-@@ -106,7 +118,25 @@ void ps2_mouse_task(void) {
+@@ -106,7 +130,61 @@ void ps2_mouse_task(void) {
      }
  #endif
  
@@ -44,6 +56,42 @@ index a51b86598e..64910ec77a 100644
 +    }
 +    /* clear bits 6+7 so QMK doesn't treat them as overflow */
 +    mouse_report.buttons &= ~((1 << PS2_MOUSE_X_OVFLW) | (1 << PS2_MOUSE_Y_OVFLW));
++#    ifdef PS2_MOUSE_THINKING_BTN_SWAP
++    /* swap two button bits so physical buttons can be remapped.
++     * define as ((src_bit << 8) | dst_bit), e.g. 0x0302 swaps bits 2+3 */
++    {
++        uint8_t a = PS2_MOUSE_THINKING_BTN_SWAP >> 8;
++        uint8_t b = PS2_MOUSE_THINKING_BTN_SWAP & 0xFF;
++        uint8_t btns = mouse_report.buttons;
++        uint8_t va = (btns >> a) & 1;
++        uint8_t vb = (btns >> b) & 1;
++        btns &= ~((1 << a) | (1 << b));
++        btns |= (vb << a) | (va << b);
++        mouse_report.buttons = btns;
++    }
++#    endif
++#endif
++#ifdef PS2_MOUSE_BTN_DEBOUNCE
++    /* Debounce button releases to suppress micro-switch chatter.
++     * Presses register immediately; releases only register after the
++     * button has been continuously released for PS2_MOUSE_BTN_DEBOUNCE ms. */
++    {
++        static uint8_t debounced = 0;
++        static uint16_t last_pressed_time[4] = {0, 0, 0, 0};
++        uint8_t raw = mouse_report.buttons & PS2_MOUSE_BTN_MASK;
++        for (uint8_t i = 0; i < 4; i++) {
++            uint8_t bit = 1 << i;
++            if (raw & bit) {
++                last_pressed_time[i] = timer_read();
++                debounced |= bit;
++            } else if (debounced & bit) {
++                if (timer_elapsed(last_pressed_time[i]) >= PS2_MOUSE_BTN_DEBOUNCE) {
++                    debounced &= ~bit;
++                }
++            }
++        }
++        mouse_report.buttons = (mouse_report.buttons & ~PS2_MOUSE_BTN_MASK) | debounced;
++    }
 +#endif
      mouse_report.buttons |= tp_buttons;
 +#ifdef PS2_MOUSE_DEBUG_BTN

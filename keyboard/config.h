@@ -26,3 +26,14 @@
 #define PS2_MOUSE_THINKING
 #define PS2_MOUSE_BTN_MASK 0x0F
 
+/* swap top-left (bit 2, middle) and top-right (bit 3, btn4) so that
+ * top-right becomes the middle/scroll button */
+#define PS2_MOUSE_THINKING_BTN_SWAP 0x0302
+
+/* slow down scroll-on-hold (default 2 is way too fast for a trackball) */
+#define PS2_MOUSE_SCROLL_DIVISOR_V 8
+#define PS2_MOUSE_SCROLL_DIVISOR_H 8
+
+/* debounce button releases to suppress micro-switch chatter (ms) */
+#define PS2_MOUSE_BTN_DEBOUNCE 50
+
