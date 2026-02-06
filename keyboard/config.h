@@ -34,6 +34,4 @@
 #define PS2_MOUSE_SCROLL_DIVISOR_V 8
 #define PS2_MOUSE_SCROLL_DIVISOR_H 8
 
-/* debounce button releases to suppress micro-switch chatter (ms) */
-#define PS2_MOUSE_BTN_DEBOUNCE 50
 
